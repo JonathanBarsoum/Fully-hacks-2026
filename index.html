@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barreleye Lens</title>
+  <meta
+    name="description"
+    content="Explore California through interactive maps focused on social issues and progress."
+  />
+  <meta
+    name="keywords"
+    content="California, map, ArcGIS, social issues, progress, data"
+  />
+  <meta name="author" content="Your Name or Team" />
+  <meta name="theme-color" content="#001f3f" />
+
+  <meta property="og:title" content="Barreleye Lens" />
+  <meta
+    property="og:description"
+    content="Explore California through interactive maps focused on social issues and progress."
+  />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://your-site.com" />
+  <meta property="og:image" content="https://your-site.com/preview.png" />
+
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="style.css" />
+
+  <script
+    type="module"
+    src="https://js.arcgis.com/5.0/embeddable-components/"
+  ></script>
+</head>
+<body>
+  <header>
+    <h1>Explore California through Barreleye Lens</h1>
+    <p>Learn about social issues and progress through interactive maps</p>
+  </header>
+
+  <main class="container">
+    <section class="left-body">
+      <arcgis-embedded-map
+        style="height: 600px; width: 100%;"
+        item-id="51c484672c7441bdb6175f41e1127b72"
+        theme="dark"
+        heading-enabled
+        legend-enabled
+        time-zone-label-enabled
+        center="-94.20518476510374,34.49538448440214"
+        scale="36978595.474472"
+        portal-url="https://pomona.maps.arcgis.com"
+      ></arcgis-embedded-map>
+    </section>
+
+    <aside class="right-body">
+      <h2>Information</h2>
+      <p>Add details about the selected issue, region, or dataset here.</p>
+    </aside>
+  </main>
+</body>
+</html>
