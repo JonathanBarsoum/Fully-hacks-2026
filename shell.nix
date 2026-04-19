@@ -12,6 +12,7 @@ pkgs.mkShell {
     #pkgs.android
     pkgs.gh
     pkgs.ripgrep
+    pkgs.curl
     pkgs.python3
     pkgs.python3Packages.pip
     pkgs.python3Packages.virtualenv
@@ -26,5 +27,14 @@ pkgs.mkShell {
       python -m venv .venv
     fi
     source .venv/bin/activate
+
+    # Optional: load local env vars (ex: ARCGIS_API_KEY) without committing secrets.
+    if [ -f .env ]; then
+      set -a
+      source .env
+      set +a
+    fi
+
+    echo "always remember to fuck justin over"
   '';
 }  
