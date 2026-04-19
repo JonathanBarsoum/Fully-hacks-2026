@@ -1,0 +1,10 @@
+{
+  "name": "mapfrontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Barreleye Watch local web server + static frontend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

@@ -1,0 +1,8 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+node_modules/
+mapFrontEnd/server.log
+mapFrontEnd/server.pid
+.DS_Store

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Basic -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barreleye Lens</title>
+  <meta name="description" content="Explore the world's oceans with an interactive map. Discover marine life, deep sea locations, and ocean data." />
+  <meta name="keywords" content="ocean, map, marine life, sea, deep sea, exploration" />
+  <meta name="author" content="Your Name or Team" />
+
+  <!-- Theme -->
+  <meta name="theme-color" content="#001f3f" />
+
+  <!-- Open Graph (for social sharing) -->
+  <meta property="og:title" content="Ocean Explorer 🌊" />
+  <meta property="og:description" content="Interactive ocean map to explore marine life and deep sea locations." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://your-site.com" />
+  <meta property="og:image" content="https://your-site.com/preview.png" />
+
+  <!-- Favicon -->
+  <link rel="icon" href="/favicon.ico" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Runtime config (served by our Node server) -->
+  <script src="/config.js" defer></script>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet/dist/leaflet.css"
+  />
+
+  <!-- Leaflet JS (defer so it doesn’t block rendering) -->
+  <script
+    src="https://unpkg.com/leaflet/dist/leaflet.js"
+    defer
+  ></script>
+
+  <!-- Esri Leaflet (ArcGIS layers on top of Leaflet) -->
+  <script
+    src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"
+    defer
+  ></script>
+
+</head>
+
+<body>
+
+ <header>
+ <h1>Explore California through Barreleye Lens</h1>
+    <p>learn about about social issues and progress through interactive maps</p>
+  </header>
+
+  <div id="map" aria-label="Interactive ocean map"></div>
+  <div id="overlay-controls" role="region" aria-label="Sea pollution overlays"></div>
+
+ <script>
+    // Leaflet is loaded as a deferred script, so init after DOM + deferred scripts run.
+    window.addEventListener("DOMContentLoaded", () => {
+      const mapEl = document.getElementById("map");
+      if (!mapEl || typeof L === "undefined") return;
+
+      // Limit the interactive area to California to keep ArcGIS layer requests scoped.
+      const CA_BOUNDS = L.latLngBounds(
+        L.latLng(32.5121, -124.6509), // SW (near San Diego / CA-MX border)
+        L.latLng(42.0126, -114.1315), // NE (near CA-OR/NV border)
+      );
+
+      const map = L.map("map", {
+        maxBounds: CA_BOUNDS.pad(0.05),
+        maxBoundsViscosity: 1.0,
+      });
+
+      // Fit to CA and prevent zooming out past it.
+      map.fitBounds(CA_BOUNDS, { padding: [24, 24] });
+      map.setMinZoom(map.getZoom());
+
+      // Ocean-style tiles (CartoDB dark = nice ocean vibe)
+      const darkBase = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution: "&copy; OpenStreetMap & CartoDB",
+        noWrap: true,
+        bounds: CA_BOUNDS.pad(0.5),
+      }).addTo(map);
+
+      // Overlay ArcGIS WebMap layers on top of the Leaflet basemap.
+      const PORTAL_URL = "https://pomona.maps.arcgis.com";
+      const WEBMAP_ITEM_ID = "abf2f34508b64f8982cd59c0fb63909f";
+
+      if (!L.esri) {
+        console.warn("Esri Leaflet failed to load; skipping ArcGIS overlay.");
+        return;
+      }
+
+      const arcgisApiKey = (window.__ARCGIS_API_KEY || "").trim();
+
+      const overlayControlsEl = document.getElementById("overlay-controls");
+      const setOverlayControls = (html) => {
+        if (!overlayControlsEl) return;
+        overlayControlsEl.innerHTML = html;
+      };
+
+      setOverlayControls(`
+        <div class="title">Sea pollution overlays</div>
+        <div class="hint">Toggle layers on/off. (Only pollution-related layers are listed.)</div>
+        <div class="list" id="overlay-list"></div>
+      `);
+
+      const overlayListEl = overlayControlsEl ? overlayControlsEl.querySelector("#overlay-list") : null;
+
+      const createOverlayToggle = (title, layer, checked) => {
+        if (!overlayListEl) return;
+
+        const safeTitle = title || "ArcGIS layer";
+        const id = `overlay-${Math.random().toString(16).slice(2)}`;
+
+        const wrapper = document.createElement("label");
+        wrapper.className = "overlay-item";
+        wrapper.setAttribute("for", id);
+
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.id = id;
+        input.checked = !!checked;
+
+        input.addEventListener("change", () => {
+          if (input.checked) map.addLayer(layer);
+          else map.removeLayer(layer);
+        });
+
+        const text = document.createElement("span");
+        text.textContent = safeTitle;
+
+        wrapper.appendChild(input);
+        wrapper.appendChild(text);
+        overlayListEl.appendChild(wrapper);
+      };
+
+      const isSeaPollutionLayer = (text) => {
+        const t = (text || "").toLowerCase();
+        const keywords = [
+          "pollution",
+          "contamin",
+          "water quality",
+          "beach",
+          "advisory",
+          "closure",
+          "oil",
+          "spill",
+          "sewage",
+          "waste",
+          "stormwater",
+          "discharge",
+          "outfall",
+          "trash",
+          "debris",
+          "plastic",
+          "microplastic",
+          "bacteria",
+          "e. coli",
+          "ecoli",
+          "fecal",
+          "algal",
+          "harmful algal",
+          "hab",
+          "toxin",
+          "cyanobacteria",
+          "impaired",
+          "impairment",
+        ];
+        return keywords.some((k) => t.includes(k));
+      };
+
+      // Use Esri Leaflet's request helper (CORS + JSONP fallback) for ArcGIS REST endpoints.
+      const requestJson = (url) =>
+        new Promise((resolve, reject) => {
+          const params = { f: "json" };
+          if (arcgisApiKey) params.token = arcgisApiKey;
+          L.esri.request(url, params, (err, response) => {
+            if (err) reject(err);
+            else resolve(response);
+          });
+        });
+
+      const resolveArcGISLayerInfo = async (opLayer) => {
+        const baseText = opLayer && opLayer.title ? String(opLayer.title) : "";
+        if (opLayer && opLayer.url) return { url: opLayer.url, text: baseText };
+        if (!opLayer || !opLayer.itemId) return { url: null, text: baseText };
+
+        const item = await requestJson(`${PORTAL_URL}/sharing/rest/content/items/${opLayer.itemId}`);
+        const tags = item && Array.isArray(item.tags) ? item.tags.join(" ") : "";
+        const itemTitle = item && item.title ? String(item.title) : "";
+        const snippet = item && item.snippet ? String(item.snippet) : "";
+        const url = item && item.url ? String(item.url) : null;
+
+        return { url, text: `${baseText} ${itemTitle} ${tags} ${snippet}`.trim() };
+      };
+
+      const addArcGISLayer = (opLayer, url) => {
+        const title = opLayer.title || opLayer.id || "ArcGIS layer";
+        let layer;
+
+        const featureServerMatch = url.match(/(.*\/FeatureServer)(?:\/(\d+))?$/i);
+        if (featureServerMatch) {
+          let layerUrl = url;
+          const layerId = typeof opLayer.layerId === "number" ? opLayer.layerId : Number(opLayer.layerId);
+          if (!featureServerMatch[2] && Number.isFinite(layerId)) {
+            layerUrl = `${url}/${layerId}`;
+          }
+          layer = L.esri.featureLayer({ url: layerUrl, token: arcgisApiKey || undefined });
+        }
+
+        const mapServerMatch = url.match(/(.*\/MapServer)(?:\/(\d+))?$/i);
+        if (!layer && mapServerMatch) {
+          const rootUrl = mapServerMatch[1];
+          const subLayerId = mapServerMatch[2] ? Number(mapServerMatch[2]) : null;
+
+          layer = L.esri.dynamicMapLayer({
+            url: rootUrl,
+            layers: subLayerId === null ? undefined : [subLayerId],
+            opacity: 0.9,
+            token: arcgisApiKey || undefined,
+          });
+        }
+
+        if (!layer) {
+          console.warn("Unsupported ArcGIS layer type:", title, url);
+          return null;
+        }
+
+        layer.addTo(map);
+        createOverlayToggle(title, layer, true);
+        return layer;
+      };
+
+      (async () => {
+        try {
+          const webmap = await requestJson(`${PORTAL_URL}/sharing/rest/content/items/${WEBMAP_ITEM_ID}/data`);
+          const operationalLayers = Array.isArray(webmap.operationalLayers) ? webmap.operationalLayers : [];
+
+          if (operationalLayers.length === 0) {
+            console.warn("ArcGIS webmap has no operationalLayers:", WEBMAP_ITEM_ID);
+            return;
+          }
+
+          const infos = await Promise.all(
+            operationalLayers.map(async (opLayer) => {
+              try {
+                const info = await resolveArcGISLayerInfo(opLayer);
+                return { opLayer, ...info };
+              } catch (err) {
+                console.warn("Failed to resolve ArcGIS layer:", opLayer && opLayer.title, err);
+                return { opLayer, url: opLayer && opLayer.url ? opLayer.url : null, text: opLayer && opLayer.title ? opLayer.title : "" };
+              }
+            }),
+          );
+
+          const pollutionInfos = infos.filter((i) => i && i.url && isSeaPollutionLayer(i.text));
+          if (pollutionInfos.length === 0) {
+            setOverlayControls(`
+              <div class="title">Sea pollution overlays</div>
+              <div class="hint">No pollution-related layers found in this ArcGIS WebMap.</div>
+            `);
+            return;
+          }
+
+          // Replace base label if we found layers.
+          if (overlayControlsEl && overlayListEl) {
+            overlayListEl.innerHTML = "";
+          }
+
+          for (const info of pollutionInfos) {
+            addArcGISLayer(info.opLayer, info.url);
+          }
+        } catch (err) {
+          console.warn("Failed to load ArcGIS overlay layers:", err);
+        }
+      })();
+    });
+  </script>
+
+</body>
+</html>
