@@ -13,11 +13,12 @@
   <link rel="stylesheet" href="https://js.arcgis.com/4.34/esri/themes/dark/main.css" />
   <script src="/config.js"></script>
   <script src="https://js.arcgis.com/4.34/"></script>
+  <script src="app.js" defer></script>
 </head>
 <body>
   <header class="site-header">
     <h1>Explore California through Barreleye Lens</h1>
-    <p>Control the live ArcGIS wildfire layers directly from the toolbar.</p>
+    <p>Control ArcGIS wildfire layers and run the event scraper from one dashboard.</p>
   </header>
 
   <main class="app-shell">
@@ -68,6 +69,16 @@
 
       <button class="tool-btn secondary" type="button" id="show-all">Show All</button>
       <button class="tool-btn secondary" type="button" id="hide-all">Hide All</button>
+
+      <section class="scrape-panel">
+        <h2>Scraper</h2>
+        <p class="toolbar-copy">
+          Run <code>websEvent.py</code>, show the returned results below, and merge only new
+          items into <code>jason.json</code>.
+        </p>
+        <button class="tool-btn accent" type="button" id="run-scrape">Run websEvent.py</button>
+        <p class="scrape-status" id="scrapeStatus">Stored events: loading…</p>
+      </section>
     </aside>
 
     <section class="map-panel">
@@ -83,242 +94,31 @@
     </div>
 
     <div class="drawer-content">
-      <h2>About this map</h2>
-      <p>
-        Use the toolbar on the left to toggle the ArcGIS wildfire layers loaded from the
-        portal item. The group layer controls the two wildfire sublayers, and the footer
-        keeps track of what is currently visible.
-      </p>
+      <section class="drawer-section">
+        <h2>Map Status</h2>
+        <p>
+          Use the toolbar on the left to toggle the ArcGIS wildfire layers loaded from the
+          portal item. The group layer controls the wildfire sublayers, and this footer tracks
+          the layers that are currently visible.
+        </p>
 
-      <div id="activeLayerStatus" class="status-stack">
-        <p><strong>Last action:</strong> <span id="selectedLayerLabel">Connecting to ArcGIS…</span></p>
-        <p><strong>Visible tracked layers:</strong> <span id="visibleLayerList">Waiting for layer data…</span></p>
-      </div>
+        <div id="activeLayerStatus" class="status-stack">
+          <p><strong>Last action:</strong> <span id="selectedLayerLabel">Connecting to ArcGIS…</span></p>
+          <p><strong>Visible tracked layers:</strong> <span id="visibleLayerList">Waiting for layer data…</span></p>
+        </div>
+      </section>
+
+      <section class="drawer-section">
+        <h2>Scrape Results</h2>
+        <p id="scrapeSummary" class="scrape-summary">
+          Run <code>websEvent.py</code> to collect fresh results and merge them into
+          <code>jason.json</code>.
+        </p>
+        <div id="scrapeResults" class="result-list">
+          <p class="empty-results">No scraper results to show yet.</p>
+        </div>
+      </section>
     </div>
   </footer>
-
-  <script>
-    const WEBMAP_ID = "51c484672c7441bdb6175f41e1127b72";
-    const PORTAL_URL = "https://pomona.maps.arcgis.com";
-
-    const drawer = document.getElementById("infoDrawer");
-    const drawerHandle = document.getElementById("drawerHandle");
-    const drawerChevron = document.getElementById("drawerChevron");
-    const mapNotice = document.getElementById("mapNotice");
-    const selectedLayerLabel = document.getElementById("selectedLayerLabel");
-    const visibleLayerList = document.getElementById("visibleLayerList");
-    const showAllButton = document.getElementById("show-all");
-    const hideAllButton = document.getElementById("hide-all");
-    const layerButtons = Array.from(document.querySelectorAll(".tool-btn[data-layer-title]"));
-
-    const layerRegistry = new Map();
-    let trackedLayers = [];
-
-    const normalize = (value) => value.trim().toLowerCase().replace(/\s+/g, " ");
-    const shortLabel = (button) =>
-      button.dataset.shortLabel || button.textContent.replace(/^Toggle\s+/i, "").trim();
-
-    function toggleDrawer() {
-      drawer.classList.toggle("open");
-      drawerChevron.textContent = drawer.classList.contains("open") ? "▼" : "▲";
-    }
-
-    function setControlsEnabled(enabled) {
-      layerButtons.forEach((button) => {
-        button.disabled = !enabled;
-      });
-      showAllButton.disabled = !enabled;
-      hideAllButton.disabled = !enabled;
-    }
-
-    function setMapNotice(message, isError = false) {
-      const hasMessage = Boolean(message);
-      mapNotice.hidden = !hasMessage;
-      mapNotice.classList.toggle("error", hasMessage && isError);
-      mapNotice.textContent = hasMessage ? message : "";
-    }
-
-    function setStatus(lastAction, visibleLabels) {
-      selectedLayerLabel.textContent = lastAction;
-      visibleLayerList.textContent = visibleLabels.length ? visibleLabels.join(", ") : "None";
-    }
-
-    function registerLayer(layer, ancestors = []) {
-      const title = layer.title || layer.id;
-      layerRegistry.set(normalize(title), { layer, ancestors, title });
-
-      if (layer.layers && typeof layer.layers.forEach === "function") {
-        layer.layers.forEach((childLayer) => {
-          registerLayer(childLayer, [...ancestors, layer]);
-        });
-      }
-    }
-
-    function getLayerEntry(layerTitle) {
-      return layerRegistry.get(normalize(layerTitle));
-    }
-
-    function isEffectivelyVisible(entry) {
-      return entry.layer.visible && entry.ancestors.every((ancestor) => ancestor.visible);
-    }
-
-    function setLayerVisibility(entry, visible) {
-      if (!entry) {
-        return;
-      }
-
-      if (visible) {
-        entry.ancestors.forEach((ancestor) => {
-          ancestor.visible = true;
-        });
-      }
-
-      entry.layer.visible = visible;
-    }
-
-    function syncButtons(lastAction) {
-      const visibleLabels = [];
-
-      trackedLayers.forEach(({ button, entry }) => {
-        if (!entry) {
-          button.disabled = true;
-          button.classList.remove("active");
-          button.classList.add("unavailable");
-          button.setAttribute("aria-pressed", "false");
-          return;
-        }
-
-        const visible = isEffectivelyVisible(entry);
-        button.classList.toggle("active", visible);
-        button.classList.remove("unavailable");
-        button.setAttribute("aria-pressed", String(visible));
-
-        if (visible) {
-          visibleLabels.push(shortLabel(button));
-        }
-      });
-
-      setStatus(lastAction, visibleLabels);
-    }
-
-    function setAllLayersVisibility(visible) {
-      trackedLayers.forEach(({ entry }) => {
-        setLayerVisibility(entry, visible);
-      });
-
-      syncButtons(visible ? "All tracked layers visible" : "All tracked layers hidden");
-    }
-
-    drawerHandle.addEventListener("click", toggleDrawer);
-    setControlsEnabled(false);
-
-    if (typeof require !== "function") {
-      setMapNotice("ArcGIS failed to load.", true);
-      setStatus("ArcGIS loader unavailable", []);
-    } else {
-      require(
-        [
-          "esri/config",
-          "esri/WebMap",
-          "esri/views/MapView",
-          "esri/widgets/Legend",
-          "esri/widgets/Expand",
-        ],
-        (esriConfig, WebMap, MapView, Legend, Expand) => {
-          esriConfig.portalUrl = PORTAL_URL;
-
-          if (window.__ARCGIS_API_KEY) {
-            esriConfig.apiKey = window.__ARCGIS_API_KEY;
-          }
-
-          const webmap = new WebMap({
-            portalItem: {
-              id: WEBMAP_ID,
-            },
-          });
-
-          const view = new MapView({
-            container: "california-map",
-            map: webmap,
-            popup: {
-              dockEnabled: true,
-              dockOptions: {
-                breakpoint: false,
-                buttonEnabled: false,
-                position: "bottom-right",
-              },
-            },
-          });
-
-          const legend = new Legend({ view });
-          const legendExpand = new Expand({
-            view,
-            content: legend,
-            expanded: true,
-          });
-
-          view.ui.add(legendExpand, "bottom-right");
-
-          Promise.all([webmap.loadAll(), view.when()])
-            .then(() => {
-              layerRegistry.clear();
-              webmap.layers.forEach((layer) => {
-                registerLayer(layer);
-              });
-
-              trackedLayers = layerButtons.map((button) => ({
-                button,
-                entry: getLayerEntry(button.dataset.layerTitle),
-              }));
-
-              const missingButtons = trackedLayers
-                .filter(({ entry }) => !entry)
-                .map(({ button }) => shortLabel(button));
-
-              setControlsEnabled(true);
-              setMapNotice("");
-              syncButtons("ArcGIS map ready");
-
-              if (missingButtons.length) {
-                setMapNotice(
-                  "Some controls could not be matched to a layer: " + missingButtons.join(", "),
-                  true,
-                );
-              }
-
-              layerButtons.forEach((button) => {
-                button.addEventListener("click", () => {
-                  const trackedLayer = trackedLayers.find((item) => item.button === button);
-                  if (!trackedLayer || !trackedLayer.entry) {
-                    return;
-                  }
-
-                  const nextVisible = !isEffectivelyVisible(trackedLayer.entry);
-                  setLayerVisibility(trackedLayer.entry, nextVisible);
-                  syncButtons(shortLabel(button) + (nextVisible ? " shown" : " hidden"));
-                });
-              });
-
-              showAllButton.addEventListener("click", () => {
-                setAllLayersVisibility(true);
-              });
-
-              hideAllButton.addEventListener("click", () => {
-                setAllLayersVisibility(false);
-              });
-            })
-            .catch((error) => {
-              console.error(error);
-              setControlsEnabled(false);
-              setMapNotice(
-                "ArcGIS map could not be loaded. Check the portal item, network access, and API key.",
-                true,
-              );
-              setStatus("ArcGIS load failed", []);
-            });
-        },
-      );
-    }
-  </script>
 </body>
 </html>

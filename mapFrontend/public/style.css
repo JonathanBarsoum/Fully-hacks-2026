@@ -41,13 +41,13 @@ body {
   flex: 1 1 auto;
   display: flex;
   min-height: 0;
-  padding: 16px 16px 96px;
+  padding: 16px 16px 110px;
   gap: 16px;
 }
 
 .toolbar {
-  width: 260px;
-  min-width: 260px;
+  width: 280px;
+  min-width: 280px;
   background: rgba(0, 0, 50, 0.5);
   border-radius: 16px;
   padding: 18px;
@@ -67,6 +67,14 @@ body {
   opacity: 0.84;
   line-height: 1.45;
   font-size: 0.92rem;
+}
+
+.toolbar code,
+.scrape-summary code {
+  font-family: "Courier New", monospace;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 1px 5px;
+  border-radius: 6px;
 }
 
 .toolbar hr {
@@ -109,8 +117,33 @@ body {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.tool-btn.accent {
+  background: rgba(20, 165, 233, 0.45);
+}
+
 .tool-btn.unavailable {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.scrape-panel {
+  margin-top: 8px;
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.scrape-status {
+  margin: 0;
+  min-height: 1.4em;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.scrape-status.error {
+  color: #ffd4d4;
 }
 
 .map-panel {
@@ -160,7 +193,7 @@ body {
   right: 16px;
   bottom: 0;
   height: 72px;
-  background: rgba(0, 0, 50, 0.92);
+  background: rgba(0, 0, 50, 0.94);
   border-top-left-radius: 18px;
   border-top-right-radius: 18px;
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.25);
@@ -170,7 +203,7 @@ body {
 }
 
 .info-drawer.open {
-  height: 240px;
+  height: 390px;
 }
 
 .drawer-handle {
@@ -185,21 +218,77 @@ body {
 }
 
 .drawer-content {
+  height: calc(100% - 72px);
   padding: 18px 20px 24px;
   text-align: left;
+  overflow-y: auto;
+  display: grid;
+  gap: 18px;
 }
 
-.drawer-content h2 {
-  margin-top: 0;
+.drawer-section h2 {
+  margin: 0 0 10px;
 }
 
-.status-stack p {
+.drawer-section p {
   margin: 0 0 10px;
   line-height: 1.45;
 }
 
-.status-stack p:last-child {
+.status-stack p:last-child,
+.drawer-section p:last-child {
   margin-bottom: 0;
+}
+
+.scrape-summary {
+  min-height: 1.45em;
+}
+
+.result-list {
+  display: grid;
+  gap: 10px;
+}
+
+.result-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.result-card h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.result-meta {
+  margin: 0 0 8px;
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.result-excerpt {
+  margin: 0 0 10px;
+  font-size: 0.93rem;
+  line-height: 1.45;
+}
+
+.result-link {
+  color: #8ed6ff;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.result-link:hover {
+  text-decoration: underline;
+}
+
+.empty-results {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .esri-view,
@@ -212,10 +301,10 @@ body {
   max-height: 320px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 980px) {
   .app-shell {
     flex-direction: column;
-    padding: 16px 16px 112px;
+    padding: 16px 16px 126px;
   }
 
   .toolbar {
@@ -232,6 +321,10 @@ body {
     left: 8px;
     right: 8px;
   }
+
+  .info-drawer.open {
+    height: 430px;
+  }
 }
 
 @media (max-width: 600px) {
@@ -246,5 +339,9 @@ body {
   .map-panel,
   .map-canvas {
     min-height: 360px;
+  }
+
+  .drawer-content {
+    padding: 16px 16px 20px;
   }
 }
