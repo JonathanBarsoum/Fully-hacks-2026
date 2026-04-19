@@ -1,15 +1,15 @@
 ## Data Sources
 
-- Rainfall -> Runoff -> Bacteria, Toxicity
-- Sea Temp -> Algal blooms -> Toxicity
-- Bacteria, Toxicity -> Beach closures
-- Beach closures + Pollution -> Community Impact shown on CalEnviroScreen
+- Rainfall -> Runoff -> Bacteria (Waste), Toxicity (Chemicals)
+- Sea Temp + Nutrients (runoff/pollution) -> Algal blooms -> Toxicity
+- Pollution (Bacteria, Toxicity) -> Beach closures
+- Beach closures -> Impact (CalEnviroScreen) 
 
 ### ⭐ Rainfall
 - [Rainfall Data]
 
 ### Sea Temp
-- [Seatemp Data]
+- [Data from ocean temp map ArcGIS]
 
 ### ⭐ Runoff
 - Runoff makes bacteria spike after rain
