@@ -11,20 +11,19 @@
   <meta name="theme-color" content="#001f3f" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://js.arcgis.com/4.34/esri/themes/dark/main.css" />
-  <script src="/config.js"></script>
   <script src="https://js.arcgis.com/4.34/"></script>
 </head>
 <body>
   <header class="site-header">
     <h1>Explore California through Barreleye Lens</h1>
-    <p>Control the live ArcGIS wildfire layers directly from the toolbar.</p>
+    <p>Wildfire + ocean overlays (basemap: OpenStreetMap — no API key needed).</p>
   </header>
 
   <main class="app-shell">
     <aside class="toolbar">
       <h2>Layers</h2>
       <p class="toolbar-copy">
-        These buttons are wired to the real ArcGIS layer titles in the shared web map.
+        These buttons toggle ArcGIS layers loaded in the map.
       </p>
 
       <button
@@ -64,6 +63,156 @@
         Toggle Thermal Hotspots
       </button>
 
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="Community Posts (jason.json)"
+        data-short-label="Community Posts"
+        aria-pressed="false"
+      >
+        Toggle Community Posts
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="Sea Surface Temperature (SST)"
+        data-short-label="SST"
+        aria-pressed="false"
+      >
+        Toggle Sea Surface Temperature (SST)
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="Chlorophyll-a (Monthly Deviation)"
+        data-short-label="Chlorophyll"
+        aria-pressed="false"
+      >
+        Toggle Chlorophyll-a (Monthly Deviation)
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="Harmful Algal Bloom Reports (CA)"
+        data-short-label="HAB Reports"
+        aria-pressed="false"
+      >
+        Toggle Harmful Algal Bloom Reports (CA)
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="California Marine Protected Areas"
+        data-short-label="MPAs"
+        aria-pressed="false"
+      >
+        Toggle California Marine Protected Areas
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="California Beaches"
+        data-short-label="Beaches"
+        aria-pressed="false"
+      >
+        Toggle California Beaches
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="Wastewater Treatment Plants (CA)"
+        data-short-label="Wastewater"
+        aria-pressed="false"
+      >
+        Toggle Wastewater Treatment Plants (CA)
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="Ocean Currents (Annual Mean)"
+        data-short-label="Currents"
+        aria-pressed="false"
+      >
+        Toggle Ocean Currents (Annual Mean)
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="Waves (Annual Mean Height/Direction)"
+        data-short-label="Waves"
+        aria-pressed="false"
+      >
+        Toggle Waves (Annual Mean Height/Direction)
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="National Marine Sanctuaries"
+        data-short-label="Sanctuaries"
+        aria-pressed="false"
+      >
+        Toggle National Marine Sanctuaries
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="National Estuarine Research Reserves (NERRS)"
+        data-short-label="NERRS"
+        aria-pressed="false"
+      >
+        Toggle NERRS
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="West Coast Shoreline (CA)"
+        data-short-label="Shoreline"
+        aria-pressed="false"
+      >
+        Toggle West Coast Shoreline (CA)
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="Coastal Armoring (CA)"
+        data-short-label="Armoring"
+        aria-pressed="false"
+      >
+        Toggle Coastal Armoring (CA)
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="Kelp Canopy (CA)"
+        data-short-label="Kelp"
+        aria-pressed="false"
+      >
+        Toggle Kelp Canopy (CA)
+      </button>
+
+      <button
+        class="tool-btn"
+        type="button"
+        data-layer-title="Wastewater Discharge Structures (Orange County)"
+        data-short-label="Discharges"
+        aria-pressed="false"
+      >
+        Toggle Wastewater Discharge Structures (Orange County)
+      </button>
+
       <hr />
 
       <button class="tool-btn secondary" type="button" id="show-all">Show All</button>
@@ -93,6 +242,11 @@
       <div id="activeLayerStatus" class="status-stack">
         <p><strong>Last action:</strong> <span id="selectedLayerLabel">Connecting to ArcGIS…</span></p>
         <p><strong>Visible tracked layers:</strong> <span id="visibleLayerList">Waiting for layer data…</span></p>
+        <p><strong>Overlay issues:</strong> <span id="layerErrorSummary">None</span></p>
+        <details id="layerErrorDetails" hidden>
+          <summary>Show details</summary>
+          <pre id="layerErrorDetailsText"></pre>
+        </details>
       </div>
     </div>
   </footer>
@@ -107,6 +261,9 @@
     const mapNotice = document.getElementById("mapNotice");
     const selectedLayerLabel = document.getElementById("selectedLayerLabel");
     const visibleLayerList = document.getElementById("visibleLayerList");
+    const layerErrorSummary = document.getElementById("layerErrorSummary");
+    const layerErrorDetails = document.getElementById("layerErrorDetails");
+    const layerErrorDetailsText = document.getElementById("layerErrorDetailsText");
     const showAllButton = document.getElementById("show-all");
     const hideAllButton = document.getElementById("hide-all");
     const layerButtons = Array.from(document.querySelectorAll(".tool-btn[data-layer-title]"));
@@ -115,6 +272,73 @@
     let trackedLayers = [];
 
     const normalize = (value) => value.trim().toLowerCase().replace(/\s+/g, " ");
+    const truncate = (value, maxLength = 700) => {
+      const text = String(value ?? "");
+      if (text.length <= maxLength) return text;
+      return text.slice(0, Math.max(0, maxLength - 1)) + "…";
+    };
+    const redactSecrets = (value) => {
+      if (value == null) return "";
+      const text = String(value);
+      return text
+        .replace(/\b(AAP[A-Za-z0-9._-]{20,})\b/g, "[REDACTED]")
+        .replace(/(api[_-]?key\s*[:=]\s*)([A-Za-z0-9._-]{20,})/gi, "$1[REDACTED]")
+        .replace(/(token\s*[:=]\s*)([A-Za-z0-9._-]{20,})/gi, "$1[REDACTED]")
+        .replace(/(token=)([^&\s]{20,})/gi, "$1[REDACTED]");
+    };
+    const redactUrl = (value) => {
+      const text = redactSecrets(value);
+      try {
+        const url = new URL(text, window.location.href);
+        ["token", "apiKey", "key", "access_token", "client_secret"].forEach((param) => {
+          if (url.searchParams.has(param)) {
+            url.searchParams.set(param, "[REDACTED]");
+          }
+        });
+        return url.toString();
+      } catch {
+        return text;
+      }
+    };
+    const formatError = (error) => {
+      if (!error) return "Unknown error";
+      if (typeof error === "string") return redactSecrets(error);
+
+      const name = error.name ? String(error.name) : "";
+      const message = error.message ? String(error.message) : "";
+      const details = Array.isArray(error.details)
+        ? error.details
+            .map((detail) => (detail && detail.message ? String(detail.message) : String(detail)))
+            .filter(Boolean)
+            .join("; ")
+        : "";
+
+      return (
+        [redactSecrets(name), redactSecrets(message), redactSecrets(details)].filter(Boolean).join(": ") ||
+        "Unknown error"
+      );
+    };
+    const collectErrorUrls = (error) => {
+      const urls = new Set();
+      const maybeAdd = (value) => {
+        if (!value) return;
+        const text = String(value).trim();
+        if (!text) return;
+        urls.add(redactUrl(text));
+      };
+
+      maybeAdd(error?.url);
+      maybeAdd(error?.requestOptions?.url);
+
+      if (Array.isArray(error?.details)) {
+        error.details.forEach((detail) => {
+          maybeAdd(detail?.url);
+          maybeAdd(detail?.requestOptions?.url);
+        });
+      }
+
+      return Array.from(urls);
+    };
     const shortLabel = (button) =>
       button.dataset.shortLabel || button.textContent.replace(/^Toggle\s+/i, "").trim();
 
@@ -212,34 +436,196 @@
     drawerHandle.addEventListener("click", toggleDrawer);
     setControlsEnabled(false);
 
+    function showUnexpectedError(prefix, error) {
+      const details = truncate(formatError(error), 700);
+      const urls = collectErrorUrls(error);
+      const requestLine = urls.length ? `Request: ${urls[0]}` : "";
+      const message = [prefix, details ? `Details: ${details}` : "", requestLine].filter(Boolean).join("\n");
+      console.error(prefix, error);
+      setMapNotice(message, true);
+    }
+
+    window.addEventListener("error", (event) => {
+      if (!event) return;
+      showUnexpectedError("Unexpected error (script).", event.error || event.message);
+    });
+
+    window.addEventListener("unhandledrejection", (event) => {
+      if (!event) return;
+      showUnexpectedError("Unexpected error (promise).", event.reason);
+    });
+
     if (typeof require !== "function") {
-      setMapNotice("ArcGIS failed to load.", true);
+      setMapNotice(
+        "ArcGIS JS API failed to load.\nTip: check your network and that https://js.arcgis.com/4.34/ isn't blocked (adblock/school Wi‑Fi).",
+        true,
+      );
       setStatus("ArcGIS loader unavailable", []);
     } else {
       require(
         [
           "esri/config",
-          "esri/WebMap",
+          "esri/Map",
           "esri/views/MapView",
+          "esri/layers/GroupLayer",
+          "esri/layers/FeatureLayer",
+          "esri/layers/GeoJSONLayer",
+          "esri/layers/ImageryLayer",
+          "esri/layers/ImageryTileLayer",
+          "esri/layers/TileLayer",
+          "esri/layers/WebTileLayer",
           "esri/widgets/Legend",
           "esri/widgets/Expand",
         ],
-        (esriConfig, WebMap, MapView, Legend, Expand) => {
-          esriConfig.portalUrl = PORTAL_URL;
+        (
+          esriConfig,
+          Map,
+          MapView,
+          GroupLayer,
+          FeatureLayer,
+          GeoJSONLayer,
+          ImageryLayer,
+          ImageryTileLayer,
+          TileLayer,
+          WebTileLayer,
+          Legend,
+          Expand,
+	        ) => {
+	          const trackedTitles = new Set(layerButtons.map((button) => normalize(button.dataset.layerTitle)));
+	          const layerFailures = new Map();
 
-          if (window.__ARCGIS_API_KEY) {
-            esriConfig.apiKey = window.__ARCGIS_API_KEY;
+	          function updateLayerErrorPanel() {
+	            const failures = Array.from(layerFailures.values()).filter(Boolean);
+
+	            if (!failures.length) {
+	              layerErrorSummary.textContent = "None";
+	              layerErrorDetails.hidden = true;
+	              layerErrorDetailsText.textContent = "";
+	              return;
+	            }
+
+	            const titles = failures.map((entry) => entry.title);
+	            const shown = titles.slice(0, 3);
+	            const suffix = titles.length > shown.length ? ` (+${titles.length - shown.length} more)` : "";
+	            layerErrorSummary.textContent = shown.join(", ") + suffix;
+
+	            const detailsText = failures
+	              .map((entry) => {
+	                const lines = [`${entry.title}`, `Message: ${entry.message}`];
+	                if (entry.details) {
+	                  lines.push(`Details: ${entry.details}`);
+	                }
+	                if (entry.urls && entry.urls.length) {
+	                  lines.push(`Request: ${entry.urls[0]}`);
+	                }
+	                return lines.join("\n");
+	              })
+	              .join("\n\n---\n\n");
+
+	            layerErrorDetails.hidden = false;
+	            layerErrorDetailsText.textContent = detailsText;
+	          }
+
+	          function setMapError(message, error) {
+	            const details = truncate(formatError(error), 700);
+	            const urls = collectErrorUrls(error);
+	            const requestLine = urls.length ? `Request: ${urls[0]}` : "";
+	            const body = [message, details ? `Details: ${details}` : "", requestLine].filter(Boolean).join("\n");
+	            setMapNotice(body, true);
+	          }
+
+	          function withTimeout(promise, timeoutMs, label) {
+	            let timeoutId;
+	            const timeoutPromise = new Promise((_, reject) => {
+	              timeoutId = window.setTimeout(() => {
+                reject(new Error(`${label} timed out after ${Math.round(timeoutMs / 1000)}s`));
+              }, timeoutMs);
+            });
+
+            return Promise.race([
+              Promise.resolve(promise).finally(() => {
+                if (timeoutId) {
+                  window.clearTimeout(timeoutId);
+                  timeoutId = undefined;
+                }
+              }),
+              timeoutPromise,
+            ]);
           }
 
-          const webmap = new WebMap({
-            portalItem: {
-              id: WEBMAP_ID,
+	          function setLayerFailure(layerTitle, error) {
+	            const key = normalize(layerTitle);
+	            if (!trackedTitles.has(key)) {
+	              return;
+	            }
+
+	            const nextMessage =
+	              key === normalize("Community Posts (jason.json)")
+	                ? "Community posts couldn't be loaded. Make sure you're running `node mapFrontend/server.js` (not opening the HTML file directly), then refresh."
+	                : `${layerTitle} could not be loaded (network/auth).`;
+
+	            const previousMessage = layerFailures.get(key);
+	            const details = truncate(formatError(error), 700);
+	            const urls = collectErrorUrls(error);
+
+	            if (previousMessage && previousMessage.message === nextMessage && previousMessage.details === details) {
+	              return;
+	            }
+
+	            layerFailures.set(key, {
+	              title: layerTitle,
+	              message: nextMessage,
+	              details,
+	              urls,
+	            });
+	            console.warn(`[layer-load] ${layerTitle}: ${formatError(error)}`);
+	            setMapError(nextMessage, error);
+	            updateLayerErrorPanel();
+	          }
+
+          const osmBasemap = new WebTileLayer({
+            title: "OpenStreetMap",
+            urlTemplate: "https://{subDomain}.tile.openstreetmap.org/{level}/{col}/{row}.png",
+            subDomains: ["a", "b", "c"],
+            copyright: "© OpenStreetMap contributors",
+          });
+
+          const map = new Map({
+            basemap: {
+              baseLayers: [osmBasemap],
             },
           });
 
+          const currentPerimetersLayer = new FeatureLayer({
+            url: "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/USA_Wildfires_v1/FeatureServer/1",
+            title: "Current Perimeters",
+            visible: true,
+          });
+
+          const currentIncidentsLayer = new FeatureLayer({
+            url: "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/USA_Wildfires_v1/FeatureServer/0",
+            title: "Current Incidents",
+            visible: true,
+          });
+
+          const wildfireGroupLayer = new GroupLayer({
+            title: "USA Current Wildfires",
+            visible: false,
+            visibilityMode: "independent",
+            layers: [currentPerimetersLayer, currentIncidentsLayer],
+          });
+
+          const viirsThermalHotspotsLayer = new FeatureLayer({
+            url: "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/Satellite_VIIRS_Thermal_Hotspots_and_Fire_Activity/FeatureServer/0",
+            title: "Satellite (VIIRS) Thermal Hotspots and Fire Activity",
+            visible: false,
+          });
+
+          map.addMany([wildfireGroupLayer, viirsThermalHotspotsLayer]);
+
           const view = new MapView({
             container: "california-map",
-            map: webmap,
+            map,
             popup: {
               dockEnabled: true,
               dockOptions: {
@@ -259,12 +645,464 @@
 
           view.ui.add(legendExpand, "bottom-right");
 
-          Promise.all([webmap.loadAll(), view.when()])
+          view.on("layerview-create-error", (event) => {
+            const title = event?.layer?.title || event?.layer?.id || "Layer";
+            setLayerFailure(title, event?.error);
+          });
+
+          const startupTimeoutMs = 25000;
+          withTimeout(view.when(), startupTimeoutMs, "MapView init")
             .then(() => {
               layerRegistry.clear();
-              webmap.layers.forEach((layer) => {
+              map.layers.forEach((layer) => {
                 registerLayer(layer);
               });
+
+              const safeAddLayer = (layerTitle, createLayer) => {
+                try {
+                  const layer = createLayer();
+                  if (layer && layer.title !== layerTitle) {
+                    layer.title = layerTitle;
+                  }
+                  map.add(layer);
+                  registerLayer(layer);
+                  return layer;
+                } catch (error) {
+                  console.error(`[overlay-init] ${layerTitle}: ${formatError(error)}`);
+                  setLayerFailure(layerTitle, error);
+                  return null;
+                }
+              };
+
+              const postsLayer = safeAddLayer(
+                "Community Posts (jason.json)",
+                () =>
+                  new GeoJSONLayer({
+                    url: "/data/posts.geojson",
+                    title: "Community Posts (jason.json)",
+                    visible: false,
+                    renderer: {
+                      type: "simple",
+                      symbol: {
+                        type: "simple-marker",
+                        style: "circle",
+                        color: [0, 200, 255, 0.9],
+                        size: 9,
+                        outline: { color: [255, 255, 255, 0.65], width: 1 },
+                      },
+                    },
+                    popupTemplate: {
+                      title: "{title}",
+                      actions: [
+                        {
+                          title: "Open source",
+                          id: "open-post-source",
+                          className: "esri-icon-launch-link-external",
+                        },
+                      ],
+                      content: (feature) => {
+                        const attrs = feature?.graphic?.attributes || {};
+
+                        const container = document.createElement("div");
+
+                        const isHttpUrl = (value) => /^https?:\/\//i.test(String(value || "").trim());
+                        const sourceUrl = String(attrs.source || "").trim();
+                        const hasSource = isHttpUrl(sourceUrl);
+
+                        if (hasSource) {
+                          const openButton = document.createElement("button");
+                          openButton.type = "button";
+                          openButton.textContent = "Open original source";
+                          openButton.style.display = "inline-flex";
+                          openButton.style.alignItems = "center";
+                          openButton.style.gap = "8px";
+                          openButton.style.padding = "8px 10px";
+                          openButton.style.borderRadius = "10px";
+                          openButton.style.border = "1px solid rgba(255,255,255,0.25)";
+                          openButton.style.background = "rgba(0,200,255,0.18)";
+                          openButton.style.color = "inherit";
+                          openButton.style.cursor = "pointer";
+                          openButton.style.marginBottom = "10px";
+                          openButton.addEventListener("click", () => {
+                            window.open(sourceUrl, "_blank", "noopener,noreferrer");
+                          });
+                          container.appendChild(openButton);
+                        }
+
+                        const meta = document.createElement("p");
+                        const platform = attrs.platform ? String(attrs.platform) : "unknown";
+                        const subreddit = attrs.subreddit ? `r/${attrs.subreddit}` : "";
+                        const created = attrs.created_iso ? ` • ${attrs.created_iso}` : "";
+                        meta.textContent = `${platform}${subreddit ? " • " + subreddit : ""}${created}`;
+                        container.appendChild(meta);
+
+                        const pre = document.createElement("pre");
+                        pre.style.whiteSpace = "pre-wrap";
+                        pre.style.margin = "12px 0";
+                        pre.textContent = String(attrs.text || "");
+                        container.appendChild(pre);
+
+                        if (hasSource) {
+                          const link = document.createElement("a");
+                          link.href = sourceUrl;
+                          link.target = "_blank";
+                          link.rel = "noreferrer";
+                          link.textContent = "Open original source";
+                          container.appendChild(link);
+                        }
+
+                        return container;
+                      },
+                    },
+                  }),
+              );
+
+              if (postsLayer) {
+                const popupEventTarget =
+                  view?.popup && typeof view.popup.on === "function" ? view.popup : view?.popup?.viewModel;
+
+                if (popupEventTarget && typeof popupEventTarget.on === "function") {
+                  popupEventTarget.on("trigger-action", (event) => {
+                    if (!event?.action || event.action.id !== "open-post-source") {
+                      return;
+                    }
+                    const feature = view.popup?.selectedFeature;
+                    if (!feature || feature.layer !== postsLayer) {
+                      return;
+                    }
+                    const url = String(feature?.attributes?.source || "").trim();
+                    if (!/^https?:\/\//i.test(url)) {
+                      return;
+                    }
+                    window.open(url, "_blank", "noopener,noreferrer");
+                  });
+                }
+              }
+
+              // Ocean / coastal overlays (each added independently).
+              safeAddLayer(
+                "Sea Surface Temperature (SST)",
+                () =>
+                  new ImageryLayer({
+                    url: "https://oceans5.arcgis.com/arcgis/rest/services/SST/ImageServer",
+                    title: "Sea Surface Temperature (SST)",
+                    visible: false,
+                    opacity: 0.55,
+                    popupEnabled: false,
+                  }),
+              );
+
+              safeAddLayer(
+                "Chlorophyll-a (Monthly Deviation)",
+                () =>
+                  new ImageryLayer({
+                    url: "https://oceans5.arcgis.com/arcgis/rest/services/chlorophyll/chlorophyll_sub1_monthly_deviation/ImageServer",
+                    title: "Chlorophyll-a (Monthly Deviation)",
+                    visible: false,
+                    opacity: 0.55,
+                    popupEnabled: false,
+                  }),
+              );
+
+              safeAddLayer(
+                "Harmful Algal Bloom Reports (CA)",
+                () =>
+                  new FeatureLayer({
+                    url: "https://services.arcgis.com/cJ9YHowT8TU7DUyn/ArcGIS/rest/services/Harmful_Algal_Blooms_in_the_US/FeatureServer/0",
+                    title: "Harmful Algal Bloom Reports (CA)",
+                    visible: false,
+                    definitionExpression: "State_Abbrev = 'CA'",
+                    outFields: [
+                      "Waterbody_Name",
+                      "Category",
+                      "Bloom_Date",
+                      "Filter_Comment",
+                      "SourceURL",
+                      "State_Abbrev",
+                    ],
+                    renderer: {
+                      type: "simple",
+                      symbol: {
+                        type: "simple-marker",
+                        style: "triangle",
+                        color: [255, 160, 0, 0.85],
+                        size: 10,
+                        outline: { color: [20, 20, 20, 0.6], width: 1 },
+                      },
+                    },
+                    popupTemplate: {
+                      title: "{Waterbody_Name}",
+                      content:
+                        "<p><strong>Category:</strong> {Category}</p>" +
+                        "<p><strong>Bloom date:</strong> {Bloom_Date}</p>" +
+                        "<p><strong>Notes:</strong> {Filter_Comment}</p>" +
+                        "<p><a href=\"{SourceURL}\" target=\"_blank\" rel=\"noreferrer\">Source link</a></p>",
+                    },
+                  }),
+              );
+
+              safeAddLayer(
+                "California Marine Protected Areas",
+                () =>
+                  new FeatureLayer({
+                    url: "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0",
+                    title: "California Marine Protected Areas",
+                    visible: false,
+                    opacity: 0.7,
+                    outFields: ["FULLNAME", "Type", "Acres", "Hectares"],
+                    renderer: {
+                      type: "simple",
+                      symbol: {
+                        type: "simple-fill",
+                        color: [0, 160, 255, 0.12],
+                        outline: { color: [0, 200, 255, 0.7], width: 1.2 },
+                      },
+                    },
+                    popupTemplate: {
+                      title: "{FULLNAME}",
+                      content:
+                        "<p><strong>Type:</strong> {Type}</p>" +
+                        "<p><strong>Acres:</strong> {Acres}</p>" +
+                        "<p><strong>Hectares:</strong> {Hectares}</p>",
+                    },
+                  }),
+              );
+
+              safeAddLayer(
+                "California Beaches",
+                () =>
+                  new FeatureLayer({
+                    url: "https://services5.arcgis.com/FDIcdEEqy1cBDX8N/ArcGIS/rest/services/CA_Beaches__CA_TA/FeatureServer/0",
+                    title: "California Beaches",
+                    visible: false,
+                    outFields: [
+                      "name",
+                      "type",
+                      "access",
+                      "dog",
+                      "fire",
+                      "camping",
+                      "nudism",
+                      "note",
+                      "website",
+                      "url",
+                      "wikipedia",
+                      "ownership",
+                    ],
+                    renderer: {
+                      type: "simple",
+                      symbol: {
+                        type: "simple-marker",
+                        style: "circle",
+                        color: [0, 255, 200, 0.78],
+                        size: 7,
+                        outline: { color: [255, 255, 255, 0.6], width: 1 },
+                      },
+                    },
+                    popupTemplate: {
+                      title: "{name}",
+                      content:
+                        "<p><strong>Type:</strong> {type}</p>" +
+                        "<p><strong>Access:</strong> {access}</p>" +
+                        "<p><strong>Dogs:</strong> {dog}</p>" +
+                        "<p><strong>Fires:</strong> {fire}</p>" +
+                        "<p><strong>Camping:</strong> {camping}</p>" +
+                        "<p><strong>Note:</strong> {note}</p>" +
+                        "<p><a href=\"{website}\" target=\"_blank\" rel=\"noreferrer\">Website</a></p>" +
+                        "<p><a href=\"{url}\" target=\"_blank\" rel=\"noreferrer\">More info</a></p>" +
+                        "<p><a href=\"{wikipedia}\" target=\"_blank\" rel=\"noreferrer\">Wikipedia</a></p>",
+                    },
+                  }),
+              );
+
+              safeAddLayer(
+                "Wastewater Treatment Plants (CA)",
+                () =>
+                  new FeatureLayer({
+                    url: "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/Wastewater_Treatment_Plants/FeatureServer/0",
+                    title: "Wastewater Treatment Plants (CA)",
+                    visible: false,
+                    definitionExpression: "CWP_STATE = 'CA'",
+                    outFields: [
+                      "CWP_NAME",
+                      "CWP_STATUS",
+                      "CWP_CITY",
+                      "CWP_COUNTY",
+                      "CWP_PERMIT",
+                      "CWP_MAJOR_",
+                      "CWP_EPA_RE",
+                    ],
+                    renderer: {
+                      type: "simple",
+                      symbol: {
+                        type: "simple-marker",
+                        style: "square",
+                        color: [255, 80, 80, 0.85],
+                        size: 7,
+                        outline: { color: [20, 20, 20, 0.55], width: 1 },
+                      },
+                    },
+                    popupTemplate: {
+                      title: "{CWP_NAME}",
+                      content:
+                        "<p><strong>Status:</strong> {CWP_STATUS}</p>" +
+                        "<p><strong>County:</strong> {CWP_COUNTY}</p>" +
+                        "<p><strong>City:</strong> {CWP_CITY}</p>" +
+                        "<p><strong>Major:</strong> {CWP_MAJOR_}</p>" +
+                        "<p><strong>Permit:</strong> {CWP_PERMIT}</p>",
+                    },
+                  }),
+              );
+
+              safeAddLayer(
+                "Ocean Currents (Annual Mean)",
+                () =>
+                  new ImageryTileLayer({
+                    url: "https://tiledimageservices.arcgis.com/jIL9msH9OI208GCb/arcgis/rest/services/Spilhaus_UV_ocean_currents/ImageServer",
+                    title: "Ocean Currents (Annual Mean)",
+                    visible: false,
+                    opacity: 0.75,
+                    popupEnabled: false,
+                    renderer: {
+                      type: "flow",
+                      density: 0.9,
+                      flowSpeed: 8,
+                      trailWidth: 1,
+                      color: [0, 200, 255, 1],
+                    },
+                  }),
+              );
+
+              safeAddLayer(
+                "Waves (Annual Mean Height/Direction)",
+                () =>
+                  new TileLayer({
+                    url: "https://coast.noaa.gov/arcgis/rest/services/OceanReports/SignificantWaveHeightAndDirection/MapServer",
+                    title: "Waves (Annual Mean Height/Direction)",
+                    visible: false,
+                    opacity: 0.75,
+                    popupEnabled: false,
+                  }),
+              );
+
+              safeAddLayer(
+                "National Marine Sanctuaries",
+                () =>
+                  new FeatureLayer({
+                    url: "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/NMS_Boundaries_02032022/FeatureServer/0",
+                    title: "National Marine Sanctuaries",
+                    visible: false,
+                    opacity: 0.55,
+                    outFields: ["*"],
+                    renderer: {
+                      type: "simple",
+                      symbol: {
+                        type: "simple-fill",
+                        color: [0, 220, 255, 0.1],
+                        outline: { color: [0, 220, 255, 0.85], width: 1.2 },
+                      },
+                    },
+                  }),
+              );
+
+              safeAddLayer(
+                "National Estuarine Research Reserves (NERRS)",
+                () =>
+                  new FeatureLayer({
+                    url: "https://services1.arcgis.com/nRHtyn3uE1kyzoYc/ArcGIS/rest/services/National_Estuarine_Research_Reserve_%28NERR%29_Boundaries/FeatureServer/0",
+                    title: "National Estuarine Research Reserves (NERRS)",
+                    visible: false,
+                    opacity: 0.55,
+                    outFields: ["*"],
+                    renderer: {
+                      type: "simple",
+                      symbol: {
+                        type: "simple-fill",
+                        color: [120, 255, 140, 0.1],
+                        outline: { color: [120, 255, 140, 0.85], width: 1.2 },
+                      },
+                    },
+                  }),
+              );
+
+              safeAddLayer(
+                "West Coast Shoreline (CA)",
+                () =>
+                  new FeatureLayer({
+                    url: "https://gis.water.ca.gov/arcgis/rest/services/Environment/WestCoastShoreline/FeatureServer/0",
+                    title: "West Coast Shoreline (CA)",
+                    visible: false,
+                    outFields: ["*"],
+                    renderer: {
+                      type: "simple",
+                      symbol: {
+                        type: "simple-line",
+                        color: [255, 255, 255, 0.9],
+                        width: 2,
+                      },
+                    },
+                  }),
+              );
+
+              safeAddLayer(
+                "Coastal Armoring (CA)",
+                () =>
+                  new FeatureLayer({
+                    url: "https://gis.water.ca.gov/arcgis/rest/services/Environment/Coastal_Erosion_Armoring/MapServer/0",
+                    title: "Coastal Armoring (CA)",
+                    visible: false,
+                    outFields: ["*"],
+                    renderer: {
+                      type: "simple",
+                      symbol: {
+                        type: "simple-line",
+                        color: [255, 210, 0, 0.9],
+                        width: 2,
+                      },
+                    },
+                  }),
+              );
+
+              safeAddLayer(
+                "Kelp Canopy (CA)",
+                () =>
+                  new FeatureLayer({
+                    url: "https://services7.arcgis.com/8URoRAqIM5JbBf0K/arcgis/rest/services/Kelp_2019/FeatureServer/0",
+                    title: "Kelp Canopy (CA)",
+                    visible: false,
+                    opacity: 0.65,
+                    outFields: ["*"],
+                    renderer: {
+                      type: "simple",
+                      symbol: {
+                        type: "simple-fill",
+                        color: [0, 180, 60, 0.18],
+                        outline: { color: [0, 180, 60, 0.85], width: 1.1 },
+                      },
+                    },
+                  }),
+              );
+
+              safeAddLayer(
+                "Wastewater Discharge Structures (Orange County)",
+                () =>
+                  new FeatureLayer({
+                    url: "https://gis.cnra.ca.gov/arcgis/rest/services/Ocean/CSMW_Coastal_Structures/MapServer/12",
+                    title: "Wastewater Discharge Structures (Orange County)",
+                    visible: false,
+                    outFields: ["*"],
+                    renderer: {
+                      type: "simple",
+                      symbol: {
+                        type: "simple-marker",
+                        style: "x",
+                        color: [255, 130, 0, 0.9],
+                        size: 10,
+                        outline: { color: [10, 10, 10, 0.6], width: 1 },
+                      },
+                    },
+                  }),
+              );
 
               trackedLayers = layerButtons.map((button) => ({
                 button,
@@ -276,12 +1114,17 @@
                 .map(({ button }) => shortLabel(button));
 
               setControlsEnabled(true);
-              setMapNotice("");
               syncButtons("ArcGIS map ready");
+
+              if (!layerFailures.size) {
+                setMapNotice("");
+              }
 
               if (missingButtons.length) {
                 setMapNotice(
-                  "Some controls could not be matched to a layer: " + missingButtons.join(", "),
+                  "Some controls could not be matched to a layer: " +
+                    missingButtons.join(", ") +
+                    "\nTip: open the Information drawer for overlay error details.",
                   true,
                 );
               }
@@ -308,12 +1151,9 @@
               });
             })
             .catch((error) => {
-              console.error(error);
+              console.error(`[map-load] ${formatError(error)}`);
               setControlsEnabled(false);
-              setMapNotice(
-                "ArcGIS map could not be loaded. Check the portal item, network access, and API key.",
-                true,
-              );
+              setMapError("ArcGIS map could not be loaded.", error);
               setStatus("ArcGIS load failed", []);
             });
         },
