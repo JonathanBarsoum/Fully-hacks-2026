@@ -10,7 +10,7 @@ pkgs.mkShell {
     #pkgs.watchman
     #pkgs.android-tools
     #pkgs.android
-    
+    pkgs.gh
     pkgs.ripgrep
     pkgs.python3
     pkgs.python3Packages.pip
@@ -26,6 +26,5 @@ pkgs.mkShell {
       python -m venv .venv
     fi
     source .venv/bin/activate
-    echo "always remember to fuck justin over"
   '';
 }  

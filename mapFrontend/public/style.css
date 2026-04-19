@@ -1,7 +1,7 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: linear-gradient(to bottom, #001f3f, #0074D9);
+  background: linear-gradient(to bottom, #001f3f, #0074d9);
   color: white;
   text-align: center;
 }
@@ -17,8 +17,21 @@ h1 {
   font-size: 2.5rem;
 }
 
-#map {
-  height: 80vh;
-  width: 100%;
-  border-top: 2px solid rgba(255,255,255,0.2);
+.container {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 20px;
+}
+
+.left-body {
+  flex: 2;
+}
+
+.right-body {
+  flex: 1;
+  text-align: left;
+  background: rgba(0, 0, 50, 0.45);
+  padding: 20px;
+  border-radius: 12px;
 }
