@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Basic -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barreleye Lens</title>
+  <meta name="description" content="Explore the world's oceans with an interactive map. Discover marine life, deep sea locations, and ocean data." />
+  <meta name="keywords" content="ocean, map, marine life, sea, deep sea, exploration" />
+  <meta name="author" content="Your Name or Team" />
+
+  <!-- Theme -->
+  <meta name="theme-color" content="#001f3f" />
+
+  <!-- Open Graph (for social sharing) -->
+  <meta property="og:title" content="Ocean Explorer 🌊" />
+  <meta property="og:description" content="Interactive ocean map to explore marine life and deep sea locations." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://your-site.com" />
+  <meta property="og:image" content="https://your-site.com/preview.png" />
+
+  <!-- Favicon -->
+  <link rel="icon" href="/favicon.ico" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet/dist/leaflet.css"
+    integrity=""
+    crossorigin=""
+  />
+
+  <!-- Leaflet JS (defer so it doesn’t block rendering) -->
+  <script
+    src="https://unpkg.com/leaflet/dist/leaflet.js"
+    defer
+  ></script>
+
+  <!-- for arcgis map enable and format-->
+  <script type="module" src="https://js.arcgis.com/5.0/embeddable-components/"></script>
+
+</head>
+
+<body>
+
+ <header>
+ <h1>Explore California through Barreleye Lens</h1>
+    <p>learn about about social issues and progress through interactive maps</p>
+  </header>
+
+ <arcgis-embedded-map style="height:600px;width:700px;" 
+   item-id="abf2f34508b64f8982cd59c0fb63909f" 
+   theme="dark" 
+   heading-enabled 
+   legend-enabled time-zone-label-enabled 
+   center="-91.37150820136533,28.82983303440135"
+   scale="1155581.108577" 
+   portal-url="https://pomona.maps.arcgis.com"
+   ></arcgis-embedded-map>
+
+ <script>
+    // Initialize map
+    const map = L.map('map').setView([20, 0], 2);
+
+    // Ocean-style tiles (CartoDB dark = nice ocean vibe)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap & CartoDB'
+    }).addTo(map);
+
+    // Example marker (Pacific Ocean)
+    const marker = L.marker([0, -160]).addTo(map);
+    marker.bindPopup("🌊 Pacific Ocean").openPopup();
+  </script>
+
+</body>
+</html>
